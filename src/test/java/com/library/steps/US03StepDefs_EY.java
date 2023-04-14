@@ -9,22 +9,19 @@ import io.restassured.response.Response;
 import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.everyItem;
-import static org.hamcrest.Matchers.notNullValue;
+import static io.restassured.RestAssured.*;
+import static org.hamcrest.Matchers.*;
+
 
 public class US03StepDefs_EY {
 
     RequestSpecification givenPart;
     Response response;
     ValidatableResponse thenPart;
-    /**
-     * US 01 RELATED STEPS
-     *
-     */
+
+
     @Given("I logged Library api as a {string}")
     public void i_logged_library_api_as_a(String userType) {
-
         givenPart = given().log().uri()
                 .header("x-library-token", LibraryAPI_Util.getToken(userType));
     }
@@ -36,7 +33,7 @@ public class US03StepDefs_EY {
 
     @Given("Request Content Type header is {string}")
     public void request_content_type_header_is(String contentTypeHeader) {
-
+        givenPart.contentType(contentTypeHeader);
     }
 
     @Given("I create a random {string} as request body")
@@ -46,7 +43,7 @@ public class US03StepDefs_EY {
 
     @When("I send POST request to {string} endpoint")
     public void i_send_post_request_to_endpoint(String endpoint) {
-        response = givenPart.when().get(ConfigurationReader.getProperty("library.baseUri") + endpoint).prettyPeek();
+        response = givenPart.when().post(endpoint).prettyPeek();
         thenPart = response.then();
     }
 
@@ -61,8 +58,8 @@ public class US03StepDefs_EY {
     }
 
     @Then("the field value for {string} path should be equal to {string}")
-    public void the_field_value_for_path_should_be_equal_to(String fieldValue, String message) {
-
+    public void the_field_value_for_path_should_be_equal_to(String path, String message) {
+        thenPart.body(path, is(message));
     }
 
     @Then("{string} field should not be null")
