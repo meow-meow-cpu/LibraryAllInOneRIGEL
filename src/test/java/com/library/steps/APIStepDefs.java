@@ -54,7 +54,7 @@ public class APIStepDefs {
     }
     @Then("{string} field should not be null")
     public void field_should_not_be_null(String path) {
-        thenPart.body(path, everyItem(notNullValue()));
+        thenPart.body(path, is(notNullValue()));
     }
 
 
@@ -66,7 +66,7 @@ public class APIStepDefs {
     }
 
     Map<String, Object> randomBook;
-    @Given("I create a random {string} as request body")
+    @And("I create a random {string} as request body")
     public void i_create_a_random_as_request_body(String random) {
         if (random.equals("book")){
             this.randomBook = LibraryAPI_Util.getRandomBookMap();
@@ -77,7 +77,8 @@ public class APIStepDefs {
 
     @When("I send POST request to {string} endpoint")
     public void i_send_post_request_to_endpoint(String post) {
-        response = givenPart.when().post(ConfigurationReader.getProperty("library.baseUri") + post).prettyPeek();
+        response = givenPart.formParams(randomBook).post(ConfigurationReader.getProperty("library.baseUri") +
+                post);
         thenPart = response.then();
     }
 
@@ -102,4 +103,43 @@ public class APIStepDefs {
     public void uiDatabaseAndAPICreatedBookInformationMustMatch() {
 
     }
+    /*
+
+    @And("created user information should match with Database")
+    public void createdUserInformationShouldMatchWithDatabase() {
+        DB_Util.runQuery("select * from users where id = "+response.path("user_id") +";");
+       // System.out.println("DB_Util.getFirstRowFirstColumn() = " + DB_Util.getFirstRowFirstColumn());
+        Assert.assertFalse(DB_Util.getFirstRowFirstColumn().isEmpty());
+    }
+
+    BasePage basePage = new BasePage() {
+        @Override
+        public void navigateModule(String moduleName) {
+            super.navigateModule(moduleName);
+        }
+    };
+    LoginPage loginPage = new LoginPage();
+    UsersPageAO usersPageAO = new UsersPageAO();
+    @And("created user should be able to login Library UI")
+    public void createdUserShouldBeAbleToLoginLibraryUI() {
+//        DB_Util.runQuery("select * from users where id = "+response.path("user_id") +";");
+//        String email = DB_Util.getCellValue(1,"email");
+//        String password = DB_Util.getCellValue(1,"password");
+//
+//        loginPage.login(email, password);
+        loginPage.login(ConfigurationReader.getProperty("librarian_username"),ConfigurationReader.getProperty("librarian_password") );
+    }
+
+    @And("created user name should appear in Dashboard Page")
+    public void createdUserNameShouldAppearInDashboardPage() {
+        BrowserUtil.waitFor(2);
+        basePage.navigateModule("Users");
+        BrowserUtil.waitFor(5);
+        usersPageAO.searchUser.click();
+        usersPageAO.searchUser.sendKeys("Connie");
+        BrowserUtil.waitFor(3);
+        //usersPageAO.verifyUserExists(response.path("name"));
+        usersPageAO.verifyUserExists("Connie");
+    }
+     */
 }
