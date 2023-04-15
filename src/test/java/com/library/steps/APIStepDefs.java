@@ -1,12 +1,19 @@
 package com.library.steps;
 
+import com.library.pages.BasePage_EY;
+import com.library.pages.BookPage;
+import com.library.pages.BookPage_EY;
+import com.library.pages.LoginPage;
+import com.library.utility.BrowserUtil;
 import com.library.utility.ConfigurationReader;
+import com.library.utility.DB_Util;
 import com.library.utility.LibraryAPI_Util;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import io.restassured.RestAssured;
+import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
 import io.restassured.response.ValidatableResponse;
@@ -19,7 +26,7 @@ import java.util.Map;
 import static io.restassured.RestAssured.*;
 import static org.hamcrest.Matchers.*;
 
-public class APIStepDefs {
+public class APIStepDefs extends BasePage_EY{
 
     RequestSpecification givenPart;
     Response response;
@@ -87,59 +94,72 @@ public class APIStepDefs {
         Assert.assertEquals(response.path(path), message);
     }
 
+    LoginPage loginPage = new LoginPage();
     @And("I logged in Library UI as {string}")
     public void iLoggedInLibraryUIAs(String user) {
-
+        loginPage.login(user);
     }
-
 
     @And("I navigate to {string} page")
     public void iNavigateToPage(String page) {
+        books.click();
 
+        String expectedHeader = "Book Management";
+        String actualHeader = pageHeader.getText();
+
+        System.out.println("expectedHeader = " + expectedHeader);
+        System.out.println("actualHeader = " + actualHeader);
+
+        Assert.assertEquals(actualHeader, expectedHeader);
     }
 
-
+    BookPage_EY bookPage = new BookPage_EY();
     @And("UI, Database and API created book information must match")
     public void uiDatabaseAndAPICreatedBookInformationMustMatch() {
+        // get data from API --> get book_id, book name
+        response.prettyPrint();
+        JsonPath jsonPath = response.jsonPath();
 
-    }
-    /*
+        String book_id = jsonPath.getString("book_id");
+        System.out.println("book_id = " + book_id);
 
-    @And("created user information should match with Database")
-    public void createdUserInformationShouldMatchWithDatabase() {
-        DB_Util.runQuery("select * from users where id = "+response.path("user_id") +";");
-       // System.out.println("DB_Util.getFirstRowFirstColumn() = " + DB_Util.getFirstRowFirstColumn());
-        Assert.assertFalse(DB_Util.getFirstRowFirstColumn().isEmpty());
-    }
+        Response response1 = givenPart
+                .pathParam("id", book_id)
+                .when().get(ConfigurationReader.getProperty("library.baseUri") + "/get_book_by_id/{id}");
 
-    BasePage basePage = new BasePage() {
-        @Override
-        public void navigateModule(String moduleName) {
-            super.navigateModule(moduleName);
-        }
-    };
-    LoginPage loginPage = new LoginPage();
-    UsersPageAO usersPageAO = new UsersPageAO();
-    @And("created user should be able to login Library UI")
-    public void createdUserShouldBeAbleToLoginLibraryUI() {
-//        DB_Util.runQuery("select * from users where id = "+response.path("user_id") +";");
-//        String email = DB_Util.getCellValue(1,"email");
-//        String password = DB_Util.getCellValue(1,"password");
-//
-//        loginPage.login(email, password);
-        loginPage.login(ConfigurationReader.getProperty("librarian_username"),ConfigurationReader.getProperty("librarian_password") );
-    }
+        JsonPath jsonPath1 = response1.jsonPath();
+        String APIName = jsonPath1.getString("name");
+        System.out.println("APIName = " + APIName);
 
-    @And("created user name should appear in Dashboard Page")
-    public void createdUserNameShouldAppearInDashboardPage() {
-        BrowserUtil.waitFor(2);
-        basePage.navigateModule("Users");
-        BrowserUtil.waitFor(5);
-        usersPageAO.searchUser.click();
-        usersPageAO.searchUser.sendKeys("Connie");
+        // get data from DB --> get book information based on book_id retrieved from API
+        String query = "select * from books where id ='" + book_id + "'";
+
+        // run query
+        DB_Util.runQuery(query);
+
+        // get DB results
+        Map<String, Object> dbMap = DB_Util.getRowMap(1);
+        System.out.println("dbMap = " + dbMap);
+
+        Object dbID = dbMap.get("id");
+        System.out.println("dbID = " + dbID);
+        Object dbName = dbMap.get("name");
+        System.out.println("dbName = " + dbName);
+
+        // API vs. DB --> compare book_id from DB to API
+         Assert.assertEquals(dbID, book_id);
+
+         // get data from UI
+        bookPage.search.sendKeys(dbName.toString());
         BrowserUtil.waitFor(3);
-        //usersPageAO.verifyUserExists(response.path("name"));
-        usersPageAO.verifyUserExists("Connie");
+
+        // UI vs. DB --> compare book name from UI to DB
+        String UIName = bookPage.tableFirstRowNameColumn.getText();
+        Assert.assertEquals(UIName, dbName);
+
+        // UI vs. API --> compare book name from UI to API
+        Assert.assertEquals(UIName, APIName);
+
     }
-     */
+
 }
