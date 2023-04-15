@@ -7,19 +7,17 @@ import com.library.utility.BrowserUtil;
 import com.library.utility.ConfigurationReader;
 import com.library.utility.DB_Util;
 import com.library.utility.LibraryAPI_Util;
-import com.mysql.cj.log.Log;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
-import io.restassured.RestAssured;
-import io.restassured.path.json.JsonPath;
+import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
-import org.hamcrest.Matchers;
 import org.junit.Assert;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +31,11 @@ public class APIStepDefs {
     ValidatableResponse thenPart;
     String pathParamKey;
     String pathParamValue;
+    static Map<String, Object> requestBody = new LinkedHashMap<>();
+
+    static String newEmailAPI;
+    static String newPasswordAPI;
+    static String newUserNameAPI;
 
 
 
@@ -107,24 +110,29 @@ public class APIStepDefs {
         givenPart.contentType(contentType);
     }
     Map<String, Object> randomUser;
-    @And("I create a random {string} as request body")
-    public void iCreateARandomAsRequestBody(String randomType) {
-        //this.randomUser= LibraryAPI_Util.getRandomUserMap();
-        //      do through switch!
-        switch (randomType){
-            case "user":
-                this.randomUser= LibraryAPI_Util.getRandomUserMap();
-                break;
+    @Given("I create a random {string} as request body")
+    public void i_create_a_random_as_request_body(String bookOrUser) {
+
+        switch (bookOrUser) {
             case "book":
-                //generate book
+                requestBody = LibraryAPI_Util.getRandomBookMap();
+                break;
+
+            case "user":
+                requestBody = LibraryAPI_Util.getRandomUserMap();
+                newUserNameAPI = (String) requestBody.get("full_name");
+                newEmailAPI = (String) requestBody.get("email");
+                newPasswordAPI = (String) requestBody.get("password");
+                break;
         }
 
+        givenPart = givenPart.formParams(requestBody);
     }
-
     @When("I send POST request to {string} endpoint")
     public void iSendPOSTRequestToEndpoint(String postRequest) {
-        response = givenPart.formParams(randomUser).post(ConfigurationReader.getProperty("library.baseUri") +
-                postRequest);
+
+            response = givenPart.post(ConfigurationReader.getProperty("library.baseUri") + postRequest).prettyPeek();
+
         thenPart = response.then();
     }
 
@@ -148,30 +156,66 @@ public class APIStepDefs {
     };
     LoginPage loginPage = new LoginPage();
     UsersPageAO usersPageAO = new UsersPageAO();
-    @And("created user should be able to login Library UI")
-    public void createdUserShouldBeAbleToLoginLibraryUI() {
-//        DB_Util.runQuery("select * from users where id = "+response.path("user_id") +";");
-//        String email = DB_Util.getCellValue(1,"email");
-//        String password = DB_Util.getCellValue(1,"password");
+//    @And("created user should be able to login Library UI")
+//    public void createdUserShouldBeAbleToLoginLibraryUI() {
+////        DB_Util.runQuery("select * from users where id = "+response.path("user_id") +";");
+////        String email = DB_Util.getCellValue(1,"email");
+////        String password = DB_Util.getCellValue(1,"password");
+////
+////        loginPage.login(email, password);
+//        loginPage.login(ConfigurationReader.getProperty("librarian_username"),ConfigurationReader.getProperty("librarian_password") );
+//    }
 //
-//        loginPage.login(email, password);
-        loginPage.login(ConfigurationReader.getProperty("librarian_username"),ConfigurationReader.getProperty("librarian_password") );
-    }
+//    @And("created user name should appear in Dashboard Page")
+//    public void createdUserNameShouldAppearInDashboardPage() {
+//        BrowserUtil.waitFor(2);
+//        basePage.navigateModule("Users");
+//        BrowserUtil.waitFor(5);
+//        usersPageAO.searchUser.click();
+//        usersPageAO.searchUser.sendKeys("Connie");
+//        BrowserUtil.waitFor(3);
+//        //usersPageAO.verifyUserExists(response.path("name"));
+//        usersPageAO.verifyUserExists("Connie");
+//    }
 
-    @And("created user name should appear in Dashboard Page")
-    public void createdUserNameShouldAppearInDashboardPage() {
+    @Then("created user should be able to login Library UI")
+    public void created_user_should_be_able_to_login_library_ui() {
+        System.out.println("newEmailAPI = " + newEmailAPI);
+        System.out.println("newPasswordAPI = " + newPasswordAPI);
+        loginPage.login(newEmailAPI, newPasswordAPI);
         BrowserUtil.waitFor(2);
-        basePage.navigateModule("Users");
-        BrowserUtil.waitFor(5);
-        usersPageAO.searchUser.click();
-        usersPageAO.searchUser.sendKeys("Connie");
-        BrowserUtil.waitFor(3);
-        //usersPageAO.verifyUserExists(response.path("name"));
-        usersPageAO.verifyUserExists("Connie");
+
     }
 
+    @Then("created user name should appear in Dashboard Page")
+    public void created_user_name_should_appear_in_dashboard_page() {
+
+        String actualUserNameUI = loginPage.accountHolderName.getText();
+
+        System.out.println("actualUserNameUI = " + actualUserNameUI);
+        System.out.println("newUserNameAPI = " + newUserNameAPI);
+
+        Assert.assertEquals(newUserNameAPI, actualUserNameUI);
 
 
+    }
 
+    //----------------US04 Finished------------------------
 
+    String email;
+    String password;
+    @Given("I logged Library api with credentials {string} and {string}")
+    public void iLoggedLibraryApiWithCredentialsAnd(String email, String password) {
+        givenPart = given().log().uri();
+        this.email = email;
+        this.password = password;
+    }
+
+    @And("I send token information as request body")
+    public void iSendTokenInformationAsRequestBody() {
+        String token = LibraryAPI_Util.getToken(email, password);
+        System.out.println("token = " + token);
+        givenPart.formParam("token",token).when();
+
+    }
 }

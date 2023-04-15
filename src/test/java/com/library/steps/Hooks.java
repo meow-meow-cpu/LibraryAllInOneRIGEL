@@ -24,7 +24,7 @@ public class Hooks {
 
     }
 
-    @After("@ui")
+   @After("@ui")
     public void tearDown(Scenario scenario){
         if(scenario.isFailed()){
             final byte[] screenshot = ((TakesScreenshot) Driver.getDriver()).getScreenshotAs(OutputType.BYTES);
